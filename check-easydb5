@@ -1,1 +1,17 @@
+#!/bin/bash
 
+# purpose of this script:
+#  take a given URL, add $APISTRING to it, call the URL,
+#  check the http-answer and depending on it return a status to nagios
+
+first(){ # first function called
+    dummy
+}
+
+dummy(){
+    echo "UNKNOWN- "
+    exit 3
+}
+
+
+first "$@"
