@@ -5,11 +5,73 @@
 #  check the http-answer and depending on it return a status to nagios
 
 first(){ # first function called
+    input "$@"
+    call_url
+    analyze_output
+}
+
+call_url(){
+    TIMESTART=`date +%s`
+    RESPONSE=`wget "$URL" -t 1 -S -q --no-cache --no-check-certificate -O - 2>&1`
+    TIMESTOP=`date +%s`
+
+    # typical response:
+    #
+    #  HTTP/1.1 200 OK
+    #  Date: Sun, 31 Dec 2017, 23:59:59 GMT
+    #  Server: nginx/1.6.2
+    #  Content-Type: application/json; charset=utf-8
+    #  Vary: Accept-Encoding,Origin
+    #  Cache-Control: no-cache
+    #  Last-Modified: Sun, 31 Dec 2017, 23:59:59 GMT
+    #  X-Easydb-API-Version: 1
+    #  X-Easydb-User-Schema-Version: 42
+    #  Pragma: no-cache
+    #  X-Easydb-Solution: base
+    #  X-Easydb-Base-Schema-Version: 179
+    #  Keep-Alive: timeout=5, max=100
+    #  Connection: Keep-Alive
+    #  Transfer-Encoding: chunked
+    #{
+    #    "name": "ffffffff-ffff-ffff-ffff-ffffffffffff",
+    #    "api": 1,
+    #    "server_version": 1,
+    #    "user-schema": 99,
+    #    "solution": "base",
+    #    "db-name": "easy5-uni-atlantis",
+    #    "startup_time": "2017-01-31T01:59:59Z",
+    #    "external_eas_url": "http://easydb.uni-atlantis.de/eas",
+    #    "server_time": "2017-12-31T23:59:59Z"
+    #}
+}
+
+analyze_output(){
+    TIME_TAKEN=$(($TIMESTOP-$TIMESTART))
+    # TODO: analyze HTTP Status, response content, output result to nagios
     dummy
 }
 
+input(){
+    URL="$1"
+    shift
+    while [ "$1" ] ; do
+        case "$1" in
+        -w)
+            WARN_TIMEOUT=$2;shift
+        ;;
+        -c)
+            CRIT_TIMEOUT=$2;shift
+        ;;
+        *)
+            echo "UNKNOWN- unknown argument '$1'">&2
+            exit 3
+        esac
+        shift
+    done
+}
+
 dummy(){
-    echo "UNKNOWN- "
+    echo "UNKNOWN- not implemented yet |"
     exit 3
 }
 
