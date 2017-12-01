@@ -57,7 +57,8 @@ define service {
         use                             generic-service
         host_name                       foo
         service_description             easydb5 instance
-        check_command                   check_by_ssh_easydb5
+        check_command                   check_by_ssh_easydb5!https://uni-atlantis.de
         }
 ~~~~
 
+Note: This is where the URL has to go (if you do the configuration in this style), separated with a ! in the check_command line, above.
