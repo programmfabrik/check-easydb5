@@ -1,22 +1,65 @@
 #!/bin/bash
 
 # purpose of this script:
-#  take a given URL, add $APISTRING to it, call the URL,
-#  check the http-answer and depending on it return a status to nagios
+#  Take a given URL, call the URL,
+#  and depending on the details of the http-answer return a status to nagios.
+#
+#  note:
+#  - Does not check https certificate.
+#  - Measures roundtrip time in seconds (which is quite rough, to be honest).
+#  - An acceptable HTTP status code is matched just with: the word OK follows somewhere after HTTP/ on the same line.
 
 first(){ # first function called
-    input "$@"
+    EXIT=3; ERRORS="" ; NOTES=""; STATS="" # start with these defaults
+    options "$@"
     call_url
-    analyze_output
+    analyze_response
+    answer_nagios
 }
 
-call_url(){
+call_url(){ # send http request to easydb5
     TIMESTART=`date +%s`
     RESPONSE=`wget "$URL" -t 1 -S -q --no-cache --no-check-certificate -O - 2>&1`
     TIMESTOP=`date +%s`
+}
 
-    # typical response:
-    #
+analyze_response(){ # process answer from easydb5
+
+    # analyze response duration
+    TIME_TAKEN=$(($TIMESTOP-$TIMESTART))
+    STATS="${STATS} Roundtrip=$TIME_TAKEN"
+    if [ $TIME_TAKEN -lt $WARN_TIMEOUT ] ; then
+        EXIT=0; NOTES="$NOTES easydb responded faster than $WARN_TIMEOUT seconds."
+    elif [ $TIME_TAKEN -lt $CRIT_TIMEOUT ] ; then
+        EXIT=1; ERRORS="$ERRORS easydb responded slower that $WARN_TIMEOUT seconds."
+    else
+        EXIT=2; ERRORS="$ERRORS easydb did not respond in $CRIT_TIMEOUT seconds."
+    fi
+
+    # analyze http-status
+    # look on all lines except the paragraph that starts with { and ends with }, each on their own lines.
+    HEADERS=`echo "$RESPONSE"|sed '/^[[:space:]]*{[[:space:]]*$/,/^[[:space:]]*}[[:space:]]*$/d'`
+    HTTP_STATUS_LINE=`echo "$HEADERS"|grep '^[[:space:]]*HTTP/'`
+    if echo "$HTTP_STATUS_LINE" | grep -qw 'OK'; then
+        NOTES="$NOTES STATUS OK: ${HTTP_STATUS_LINE}."
+    else
+        EXIT=2
+        ERRORS="$ERRORS STATUS: ${HTTP_STATUS_LINE}!"
+    fi
+
+    # analyze response content
+    # only look on the paragraph that starts with { and ends with }, each on their own lines.
+    CONTENT=`echo "$RESPONSE"|sed -n '/^[[:space:]]*{[[:space:]]*$/,/^[[:space:]]*}[[:space:]]*$/p'`
+    # is $SEARCH_STRING in there?!
+    if echo "$CONTENT" | grep -q "$SEARCH_STRING"; then
+        NOTES="$NOTES Found $SEARCH_STRING in answer."
+    else
+        EXIT=2
+        ERRORS="$ERRORS Did not find $SEARCH_STRING in answer!"
+    fi
+
+    # a typical response:
+     
     #  HTTP/1.1 200 OK
     #  Date: Sun, 31 Dec 2017, 23:59:59 GMT
     #  Server: nginx/1.6.2
@@ -45,15 +88,16 @@ call_url(){
     #}
 }
 
-analyze_output(){
-    TIME_TAKEN=$(($TIMESTOP-$TIMESTART))
-    # TODO: analyze HTTP Status, response content, output result to nagios
-    dummy
-}
-
-input(){
+options(){ # process command line parameters
     URL="$1"
+    [ -z "$URL" ] && ERRORS="URL missing as first argument" EXIT=3 answer_nagios
     shift
+
+    # defaults:
+    WARN_TIMEOUT=5
+    CRIT_TIMEOUT=30
+    SEARCH_STRING=db-name
+
     while [ "$1" ] ; do
         case "$1" in
         -w)
@@ -62,18 +106,25 @@ input(){
         -c)
             CRIT_TIMEOUT=$2;shift
         ;;
+        -s)
+            SEARCH_STRING="$2";shift
+        ;;
         *)
-            echo "UNKNOWN- unknown argument '$1'">&2
-            exit 3
+            ERRORS="unknown argument '$1'" EXIT=3 answer_nagios
         esac
         shift
     done
 }
 
-dummy(){
-    echo "UNKNOWN- not implemented yet |"
-    exit 3
+answer_nagios(){ # follow nagios rules for text syntax and return/exit code/status/value
+    case $EXIT in
+    0) echo -n "OK-" ;;
+    1) echo -n "WARNING-" ;;
+    2) echo -n "CRITICAL-" ;;
+    3) echo -n "UNKNOWN-" ;;
+    esac
+    echo "$ERRORS$NOTES"'| '"$STATS"
+    exit $EXIT
 }
-
 
 first "$@"
