@@ -1,13 +1,11 @@
 # check-easydb5
-Nagios plugin to check whether an easydb5 instance is up.
+This is a Nagios plug-in which checks whether an easydb5 instance is up and responding in a given time frame.
 
 ## mandatory input
 
 Needs a given URL, as first command line argument.
 
-Recommended: use the basic easydb frontend URL in your host conig and add the API /api/v1/settings to it in nagios server config.
-
-See below for a tested example.
+Recommended: Use the basic easydb front-end URL in your host configuration and append the API call /api/v1/settings to the URL in the Nagios server configuration. See below for a tested example.
 
 ## optional input
 
@@ -30,7 +28,7 @@ Example command line option which sets the default:
 -s db-name
 ~~~~
 
-## nagios configuration example
+## Nagios server configuration example
 
 On your Nagios server add: (in e.g. /etc/nagios-plugins/config/local/easydb.cfg)
 
@@ -41,7 +39,7 @@ define command {
 }
 ~~~~
 
-Set the default values, in this example in /etc/icinga/objects/generic-host_icinga.cfg (icinga is a nagios fork):
+Set the default values, in this example in /etc/icinga/objects/generic-host_icinga.cfg (Icinga is a Nagios fork):
 
 ~~~~
         _EASYDB5_WARN                   4
@@ -61,4 +59,18 @@ define service {
         }
 ~~~~
 
-Note: This is where the URL has to go (if you do the configuration in this style), separated with a ! in the check_command line, above.
+Note: This is where the basic easydb front-end URL has to go (in this example and configuration style), separated with a ! in the check_command line, above.
+
+There are other ways to set up the connection between Nagios client and server. But if you followed the style shown here, then also make sure that the nagios user of the Nagios server is able to log into nagios@client without interactive barriers (SSH-key instead of password and the host key has been accepted by confirming with "yes" during a prior connection).
+
+## installation example on a client
+On the server where docker for easydb5 is running, but not inside a docker container, do:
+
+~~~~
+mkdir -p /usr/local/nagios/libexec
+cd /usr/local/nagios/libexec
+git clone https://github.com/programmfabrik/check-easydb5
+~~~~
+
+It bears repetition to say that Nagios has to be able to connect automatically, either by SSH as in the example above, or by other means.
+
