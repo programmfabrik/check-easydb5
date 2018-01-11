@@ -7,7 +7,7 @@
 #  note:
 #  - Does not check https certificate.
 #  - Measures roundtrip time in seconds (which is quite rough, to be honest).
-#  - An acceptable HTTP status code is matched just with: the word OK follows somewhere after HTTP/ on the same line.
+#  - An acceptable HTTP status code is matched just with: the word OK follows somewhere after HTTP/.
 
 first(){ # first function called
     EXIT=3; ERRORS="" ; NOTES=""; STATS="" # start with these defaults
@@ -40,6 +40,7 @@ analyze_response(){ # process answer from easydb5
     # look on all lines except the paragraph that starts with { and ends with }, each on their own lines.
     HEADERS=`echo "$RESPONSE"|sed '/^[[:space:]]*{[[:space:]]*$/,/^[[:space:]]*}[[:space:]]*$/d'`
     HTTP_STATUS_LINE=`echo "$HEADERS"|grep '^[[:space:]]*HTTP/'`
+    HTTP_STATUS_LINE=`echo $HTTP_STATUS_LINE`          # removes line breaks. Line breaks in icinga web UI are cut off in some places and look broken.
     if echo "$HTTP_STATUS_LINE" | grep -qw 'OK'; then
         NOTES="$NOTES STATUS OK: ${HTTP_STATUS_LINE}."
     else
