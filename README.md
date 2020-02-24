@@ -76,18 +76,22 @@ It bears repetition to say that Nagios has to be able to connect automatically, 
 
 ## check_mk host configuration example
 
-On your monitored Host do:
+On your monitored Host, install check_mk_agent and do:
 
-Replace the following URL with your easydb URL.
 ~~~~
-echo "Easydb5 /usr/lib/nagios/plugins/check_easydb5 'https://url.easydb.de/api/v1/settings' -w '2' -c '8' -s 'db-name'" >> /etc/check_mk/mrpe.cfg
-chmod 600 /etc/check_mk/mrpe.cfg
-
 mkdir -p /usr/local/nagios/libexec /usr/lib/nagios/plugins
 cd /usr/local/nagios/libexec
 git clone https://github.com/programmfabrik/check-easydb5
 cd /usr/lib/nagios/plugins
 ln -s /usr/local/nagios/libexec/check-easydb5/check_easydb5 .
 ~~~~
-
+Replace the following URL with your easydb URL.
+~~~~
+echo "Easydb5 /usr/lib/nagios/plugins/check_easydb5 'https://url.easydb.de/api/v1/settings' -w '2' -c '8' -s 'db-name'" >> /etc/check_mk/mrpe.cfg
+chmod 600 /etc/check_mk/mrpe.cfg
+~~~~
+Test:
+~~~~
+check_mk_agent
+~~~~
 check_mk should find the easydb5 plugin at the next service discovery check.
